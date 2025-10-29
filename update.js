@@ -1,7 +1,8 @@
-// update.js — Dashboard with exact date-bounded counts that match Mike's sheet
-// - Commits, monthly buckets, contributors, top 5 => GitHub Commits API (not /stats)
-// - 2024 = full year; 2025 YTD is capped at Oct 31, 23:59:59Z (10 months)
-// - Excludes merges (parents.length > 1) and filters bots/service accounts
+// update.js — exact, sheet-matching numbers (merges INCLUDED)
+// - Totals, monthly buckets, contributors, top 5 => GitHub Commits API (date-bounded)
+// - 2024 = full year; 2025 YTD is fixed at Oct 31 (10 months) to match the spreadsheet
+// - Commit totals INCLUDE merges; bot filtering is only for contributor identity
+// - Writes docs/index.html + docs/verification.json
 // Node 20+, no npm deps.
 
 import fs from "node:fs/promises";
@@ -17,15 +18,12 @@ const PROJECTS = [
 ];
 
 const YEAR_A = 2024;
-// IMPORTANT: we freeze 2025 YTD at end of October to match the spreadsheet (10 months)
 const YEAR_B = 2025;
-const YTD_CUTOFF = new Date(Date.UTC(2025, 9, 31, 23, 59, 59)); // 2025-10-31T23:59:59Z
+const YTD_CUTOFF = new Date(Date.UTC(2025, 9, 31, 23, 59, 59)); // 2025-10-31
 const MONTHS_A = 12;
-const MONTHS_B = 10; // YTD through October
+const MONTHS_B = 10;
 
 /* =========================== HELPERS ============================ */
-
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 function headers() {
   const h = {
@@ -36,18 +34,7 @@ function headers() {
   if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
-
 async function ghRaw(url) { return fetch(url, { headers: headers() }); }
-
-async function gh(endpoint) {
-  const res = await ghRaw(`https://api.github.com${endpoint}`);
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`GitHub API ${res.status} for ${endpoint}: ${body}`);
-  }
-  return res.json();
-}
-
 function parseLinkHeader(h) {
   if (!h) return {};
   return Object.fromEntries(
@@ -57,7 +44,6 @@ function parseLinkHeader(h) {
     }).filter(Boolean)
   );
 }
-
 async function ghPaginated(endpoint) {
   const out = [];
   let url = `https://api.github.com${endpoint}`;
@@ -73,76 +59,67 @@ async function ghPaginated(endpoint) {
   }
   return out;
 }
+function iso(y,m,d,h=0,mi=0,s=0){ return new Date(Date.UTC(y,m-1,d,h,mi,s)).toISOString(); }
 
 /* ========================= BOT FILTERING ======================== */
-
+// Used ONLY for contributor identity (not for totals)
 const BOT_PATTERNS = [
   /\[bot\]$/i, /-bot$/i, /^bot-/i,
   /\bdependabot\b/i, /\bgithub-actions\b/i, /\brenovate\b/i,
   /\bpre-commit-ci\b/i, /\bsemantic-release\b/i, /\bpercy\b/i,
   /\bsnyk\b/i, /\bauto[-_ ]?merge\b/i, /\bautomation\b/i, /\brelease[-_ ]?bot\b/i
 ];
-
-function isBotLogin(login) { return !!login && BOT_PATTERNS.some(rx => rx.test(login)); }
-function isBotNameOrEmail(name, email) {
-  const s = `${name || ""} ${email || ""}`;
-  return BOT_PATTERNS.some(rx => rx.test(s));
-}
-function isBotAuthor(author, commit) {
-  if (author?.type === "Bot") return true;
-  if (isBotLogin(author?.login)) return true;
-  const n = commit?.author?.name || "";
-  const e = commit?.author?.email || "";
-  return isBotNameOrEmail(n, e);
+function looksLikeBot(loginOrNameOrEmail) {
+  if (!loginOrNameOrEmail) return false;
+  return BOT_PATTERNS.some(rx => rx.test(String(loginOrNameOrEmail)));
 }
 
 /* =========================== DATA FETCH ========================= */
 
 async function fetchRepoMeta(owner, repo) {
-  return gh(`/repos/${owner}/${repo}`);
+  const res = await ghRaw(`https://api.github.com/repos/${owner}/${repo}`);
+  if (!res.ok) throw new Error(`Repo meta ${res.status} ${owner}/${repo}`);
+  return res.json();
 }
-
-// Date-bounded commits with pagination
-async function fetchCommits(owner, repo, since, until) {
-  const endpoint = `/repos/${owner}/${repo}/commits?per_page=100&since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`;
+async function fetchCommits(owner, repo, sinceISO, untilISO) {
+  const endpoint = `/repos/${owner}/${repo}/commits?per_page=100&since=${encodeURIComponent(sinceISO)}&until=${encodeURIComponent(untilISO)}`;
   return ghPaginated(endpoint);
 }
 
-// Compute: totals, monthly buckets, unique contributors, top 5 (non-bots, non-merges)
-function aggregateFromCommits(commits, monthsCount, year) {
+/* ============ Aggregate (INCLUDE merges in totals) ============== */
+
+function aggregate(commits, monthsCount, year) {
   const monthly = Array.from({ length: 12 }, () => 0);
-  const byAuthor = new Map(); // key (login OR email/name) -> commit count
+  const byAuthor = new Map(); // login || email || name -> commits
   let total = 0;
 
   for (const c of commits) {
-    // Exclude merges
-    if (Array.isArray(c.parents) && c.parents.length > 1) continue;
-    if (isBotAuthor(c.author, c.commit)) continue;
+    // Date bucket (author date preferred)
+    const when = c.commit?.author?.date || c.commit?.committer?.date;
+    if (!when) continue;
+    const dt = new Date(when);
+    if (dt.getUTCFullYear() !== year) continue;
 
-    // Month bucket
-    const dt = new Date(c.commit?.author?.date || c.commit?.committer?.date || 0);
-    const y = dt.getUTCFullYear();
-    if (y !== year) continue; // safety
-
-    const m = dt.getUTCMonth(); // 0..11
-    monthly[m] += 1;
+    // Totals INCLUDE merges (no parents-length filter)
     total += 1;
 
-    // Contributor tally
-    const login = c.author?.login || null;
-    const name  = c.commit?.author?.name || "";
-    const email = c.commit?.author?.email || "";
-    const key = login || (email || name || "unknown");
-    byAuthor.set(key, (byAuthor.get(key) || 0) + 1);
+    // Monthly bucket
+    const m = dt.getUTCMonth(); // 0..11
+    monthly[m] += 1;
+
+    // Contributor identity (exclude obvious bots)
+    const login = c.author?.login;
+    const name  = c.commit?.author?.name;
+    const email = c.commit?.author?.email;
+    const id = login || email || name || "unknown";
+
+    if (looksLikeBot(login) || looksLikeBot(name) || looksLikeBot(email)) continue;
+    byAuthor.set(id, (byAuthor.get(id) || 0) + 1);
   }
 
-  // Average per month (divide by declared monthsCount)
   const avg = Math.round((total / monthsCount) * 100) / 100;
-
   const unique = byAuthor.size;
-  const top = [...byAuthor.entries()]
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,5)
+  const top = [...byAuthor.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5)
     .map(([author, commits]) => ({ author, commits }));
 
   return { total, monthly, avg, unique, top };
@@ -168,10 +145,7 @@ function renderHTML(snapshot) {
     m2025: p.y2025.monthly
   }));
 
-  const dataJSON = JSON.stringify({
-    labels, commitsA, commitsB, devsA, devsB, forks, perProjectMonthly,
-    YEAR_A, YEAR_B
-  });
+  const dataJSON = JSON.stringify({ labels, commitsA, commitsB, devsA, devsB, forks, perProjectMonthly, YEAR_A, YEAR_B });
 
   return `<!doctype html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -236,43 +210,48 @@ footer{color:var(--muted);text-align:center;padding:26px 10px;border-top:1px sol
   </section>
 </main>
 
-<footer>Date bounds: 2024 full year; 2025 through Oct 31 (10 months). Bots and merges excluded.</footer>
+<footer>Date bounds: 2024 full year; 2025 through Oct 31 (10 months). Bots ignored for contributor identity; merges INCLUDED in totals.</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
 <script>
 (function () {
-  const DATA = ${dataJSON};
+  const DATA = ${JSON.stringify({YEAR_A, YEAR_B})}; // titles only
+  const payload = ${JSON.stringify({
+    labels: null, // filled at runtime below
+  })}; // placeholder, not used
 
-  function g(id){ const el=document.getElementById(id); return el?el.getContext('2d'):null; }
+  // Inline data block to dodge JSON stringify escaping issues
+  const DATASET = ${(() => 'true')()}; // dummy to anchor template
 
-  function bar(ctx, label, data, label2, data2){
-    if (!ctx || !window.Chart) return;
-    new Chart(ctx,{type:'bar',data:{labels:DATA.labels,datasets:[
-      {label:String(DATA.YEAR_A),data:data},
-      {label:String(DATA.YEAR_B)+' (YTD)',data:data2}
-    ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}});
-  }
+})();
+</script>
+<script>
+(function () {
+  const DATA = ${JSON.stringify({ YEAR_A, YEAR_B })};
+  const snapshot = ${'__SNAPSHOT__'};
+  const labels   = snapshot.map(p=>p.label);
+  const commitsA = snapshot.map(p=>p.y2024.total);
+  const commitsB = snapshot.map(p=>p.y2025.total);
+  const devsA    = snapshot.map(p=>p.y2024.unique);
+  const devsB    = snapshot.map(p=>p.y2025.unique);
+  const forks    = snapshot.map(p=>p.meta.forks_count);
 
+  function ctx(id){ const el=document.getElementById(id); return el?el.getContext('2d'):null; }
+  function bar(c,l1,d1,l2,d2){ if(!c||!window.Chart)return; new Chart(c,{type:'bar',data:{labels:labels,datasets:[{label:String(DATA.YEAR_A),data:d1},{label:String(DATA.YEAR_B)+' (YTD)',data:d2}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}}); }
   function start(){
-    bar(g('commitsBar'), 'Commits', DATA.commitsA, 'Commits', DATA.commitsB);
-    bar(g('devsBar'), 'Contribs', DATA.devsA, 'Contribs', DATA.devsB);
-
-    const f=g('forksBar');
-    if (f) new Chart(f,{type:'bar',data:{labels:DATA.labels,datasets:[{label:'Forks',data:DATA.forks}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}});
-
+    bar(ctx('commitsBar'),'c',commitsA,'c',commitsB);
+    bar(ctx('devsBar'),'d',devsA,'d',devsB);
+    const f=ctx('forksBar'); if(f) new Chart(f,{type:'bar',data:{labels:labels,datasets:[{label:'Forks',data:forks}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}});
     const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    for (const proj of DATA.perProjectMonthly){
-      const el=document.getElementById('mini-'+proj.label.toLowerCase());
-      if (!el) continue;
+    for(const p of snapshot){
+      const el=document.getElementById('mini-'+p.id); if(!el) continue;
       new Chart(el.getContext('2d'),{type:'line',data:{labels:months,datasets:[
-        {label:String(DATA.YEAR_A),data:proj.m2024,tension:.25},
-        {label:String(DATA.YEAR_B)+' (YTD)',data:proj.m2025,tension:.25}
+        {label:String(DATA.YEAR_A),data:p.y2024.monthly,tension:.25},
+        {label:String(DATA.YEAR_B)+' (YTD)',data:p.y2025.monthly,tension:.25}
       ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}});
     }
   }
-
-  if (document.readyState==='complete') start();
-  else window.addEventListener('load', start);
+  if(document.readyState==='complete') start(); else window.addEventListener('load', start);
 })();
 </script>
 </body></html>`;
@@ -280,25 +259,23 @@ footer{color:var(--muted);text-align:center;padding:26px 10px;border-top:1px sol
 
 /* ============================== MAIN ============================== */
 
-function iso(y,m,d,h=0,mi=0,s=0){ return new Date(Date.UTC(y,m-1,d,h,mi,s)).toISOString(); }
-
 (async () => {
   const outDir = path.join(process.cwd(), "docs");
-  const outFile = path.join(outDir, "index.html");
+  await fs.mkdir(outDir, { recursive: true });
 
   const results = [];
+  const verify = [];
+
   for (const p of PROJECTS) {
     const [owner, repo] = p.slug.split("/");
 
     const meta = await fetchRepoMeta(owner, repo);
 
-    // 2024 full-year window
     const commits2024 = await fetchCommits(owner, repo, iso(2024,1,1), iso(2024,12,31,23,59,59));
-    const y2024 = aggregateFromCommits(commits2024, MONTHS_A, 2024);
+    const y2024 = aggregate(commits2024, MONTHS_A, 2024);
 
-    // 2025 YTD: Jan 1 through Oct 31 (fixed to 10 months to match sheet)
     const commits2025 = await fetchCommits(owner, repo, iso(2025,1,1), YTD_CUTOFF.toISOString());
-    const y2025 = aggregateFromCommits(commits2025, MONTHS_B, 2025);
+    const y2025 = aggregate(commits2025, MONTHS_B, 2025);
 
     results.push({
       id: p.label.toLowerCase(),
@@ -307,10 +284,22 @@ function iso(y,m,d,h=0,mi=0,s=0){ return new Date(Date.UTC(y,m-1,d,h,mi,s)).toIS
       y2024,
       y2025
     });
+
+    verify.push({
+      repo: p.slug,
+      totals: { "2024": y2024.total, "2025_YTD": y2025.total },
+      unique_contributors: { "2024": y2024.unique, "2025_YTD": y2025.unique },
+      averages: { "2024": y2024.avg, "2025_YTD": y2025.avg },
+      top5_2025_YTD: y2025.top
+    });
   }
 
-  const html = renderHTML(results);
-  await fs.mkdir(outDir, { recursive: true });
-  await fs.writeFile(outFile, html, "utf8");
-  console.log("Wrote", outFile);
+  // Write HTML
+  const html = renderHTML(results).replace('__SNAPSHOT__', JSON.stringify(results));
+  await fs.writeFile(path.join(outDir, "index.html"), html, "utf8");
+
+  // Write verification JSON (raw numbers used for the charts)
+  await fs.writeFile(path.join(outDir, "verification.json"), JSON.stringify({ generatedAt: new Date().toISOString(), results: verify }, null, 2), "utf8");
+
+  console.log("Wrote docs/index.html and docs/verification.json");
 })();
