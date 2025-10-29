@@ -235,7 +235,8 @@ footer{color:var(--muted);text-align:center;padding:26px 10px;border-top:1px sol
 
 <footer>Data: GitHub REST API (Commits per year for contributor counts; /stats for monthly totals).</footer>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <script>
 const DATA = ${dataJSON};
 function buildBar(id, labelA, dataA, labelB, dataB){
