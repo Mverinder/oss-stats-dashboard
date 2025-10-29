@@ -1,156 +1,124 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Open-Source Testing: 2024 vs 2025</title>
 <style>
 :root{--bg:#0f1116;--panel:#161a23;--text:#e7e8ea;--muted:#9aa0ac;--accent:#5aa2ff;--border:#2a2f3a}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
 header{position:sticky;top:0;background:rgba(15,17,22,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
 .wrap{max-width:1150px;margin:0 auto;padding:18px 20px}
-h1{margin:0 0 4px;font-size:22px}
-.sub{color:var(--muted);font-size:13px}
+h1{margin:0 0 4px;font-size:22px}.sub{color:var(--muted);font-size:13px}
 main{max-width:1150px;margin:0 auto;padding:22px 20px 36px;display:grid;gap:18px}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px 16px 18px}
-.kpis{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
-.kpi{grid-column:span 3;background:#181d29;border:1px solid var(--border);border-radius:14px;padding:14px}
-.kpi .label{color:var(--muted);font-size:12px;letter-spacing:.03em;text-transform:uppercase}
-.kpi .value{font-size:22px;margin-top:6px}
-@media (max-width:900px){.kpi{grid-column:span 6}}
-@media (max-width:600px){.kpi{grid-column:span 12}}
-.projects{display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
-.project{grid-column:span 6;background:#181d29;border:1px solid var(--border);border-radius:14px;padding:14px}
-@media (max-width:900px){.project{grid-column:span 12}}
-.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.muted{color:var(--muted)}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-table{width:100%;border-collapse:collapse}
-th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
-th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
-canvas{width:100%;height:360px}.mini{height:220px}
-.pill{display:inline-block;border:1px solid var(--border);background:#141925;padding:2px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+.muted{color:var(--muted)} .pill{display:inline-block;border:1px solid var(--border);background:#141925;padding:2px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+.projects{display:grid;gap:14px;grid-template-columns:repeat(12,1fr)} .project{grid-column:span 6;background:#181d29;border:1px solid var(--border);border-radius:14px;padding:14px}
+@media (max-width:900px){.project{grid-column:span 12}} table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)} th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+canvas{width:100%;height:360px}.mini{height:220px} a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
 footer{color:var(--muted);text-align:center;padding:26px 10px;border-top:1px solid var(--border)}
 </style>
-</head>
-<body>
-<header><div class="wrap">
-  <h1>Open-Source Testing Dashboard</h1>
-  <div class="sub">Daily updates — generated Oct 29, 2025, 9:56 PM</div>
-</div></header>
+</head><body>
+<header><div class="wrap"><h1>Open-Source Testing Dashboard</h1><div class="sub">Daily updates — generated Oct 29, 2025, 10:12 PM</div></div></header>
 
 <main>
-  <section class="card">
-    <div class="row"><div><span class="pill">Commits</span></div></div>
-    <canvas id="commitsBar"></canvas>
-  </section>
-
-  <section class="card">
-    <div class="row"><div><span class="pill">Contributors (Unique, Non-Bots)</span></div></div>
-    <canvas id="devsBar"></canvas>
-  </section>
-
-  <section class="card">
-    <div class="row"><div><span class="pill">Forks</span></div></div>
-    <canvas id="forksBar"></canvas>
-  </section>
+  <section class="card"><div class="pill">Commits</div><canvas id="commitsBar"></canvas></section>
+  <section class="card"><div class="pill">Contributors (Unique, Non-Bots)</div><canvas id="devsBar"></canvas></section>
+  <section class="card"><div class="pill">Forks</div><canvas id="forksBar"></canvas></section>
 
   <section class="card">
     <h2 style="margin:0 0 10px">Per-Project Details</h2>
     <div class="projects">
       
       <div class="project">
-        <div class="row">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
           <h3 style="margin:0">Playwright</h3>
           <div class="muted">★ 78748 • Forks 4748</div>
         </div>
 
-        <div class="kpis" style="margin:10px 0 6px">
-          <div class="kpi"><div class="label">2024 Total Commits</div><div class="value">325</div><div class="muted">Avg/mo: 27.08</div></div>
-          <div class="kpi"><div class="label">2025 Total Commits</div><div class="value">1,839</div><div class="muted">Avg/mo (YTD): 183.9</div></div>
-          <div class="kpi"><div class="label">2024 Unique Devs</div><div class="value">32</div></div>
-          <div class="kpi"><div class="label">2025 Unique Devs</div><div class="value">25</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0 6px">
+          <div><div class="muted">2024 Total Commits</div><div style="font-size:22px">325</div><div class="muted">Avg/mo: 27.08</div></div>
+          <div><div class="muted">2025 Total Commits</div><div style="font-size:22px">1,839</div><div class="muted">Avg/mo (YTD): 183.9</div></div>
+          <div><div class="muted">2024 Unique Devs</div><div style="font-size:22px">139</div></div>
+          <div><div class="muted">2025 Unique Devs</div><div style="font-size:22px">81</div></div>
         </div>
 
-        <div class="row"><div class="muted">Monthly Commits (2024 vs 2025)</div></div>
+        <div class="muted">Monthly Commits (2024 vs 2025)</div>
         <canvas class="mini" id="mini-playwright"></canvas>
 
         <h4 style="margin:14px 0 6px">Top 5 Committers (non-bots, 2025 YTD)</h4>
         <table><thead><tr><th>#</th><th>Author</th><th>Commits</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>dgozman</td><td>289</td></tr><tr><td>2</td><td>pavelfeldman</td><td>268</td></tr><tr><td>3</td><td>mxschmitt</td><td>257</td></tr><tr><td>4</td><td>yury-s</td><td>230</td></tr><tr><td>5</td><td>Skn0tt</td><td>168</td></tr>
+            <tr><td>1</td><td>dgozman</td><td>270</td></tr><tr><td>2</td><td>pavelfeldman</td><td>268</td></tr><tr><td>3</td><td>mxschmitt</td><td>236</td></tr><tr><td>4</td><td>yury-s</td><td>229</td></tr><tr><td>5</td><td>Skn0tt</td><td>163</td></tr>
           </tbody>
         </table>
         <div class="muted" style="margin-top:6px">Repo: <a href="https://github.com/microsoft/playwright">microsoft/playwright</a></div>
       </div>
       <div class="project">
-        <div class="row">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
           <h3 style="margin:0">Selenium</h3>
           <div class="muted">★ 33546 • Forks 8608</div>
         </div>
 
-        <div class="kpis" style="margin:10px 0 6px">
-          <div class="kpi"><div class="label">2024 Total Commits</div><div class="value">340</div><div class="muted">Avg/mo: 28.33</div></div>
-          <div class="kpi"><div class="label">2025 Total Commits</div><div class="value">1,430</div><div class="muted">Avg/mo (YTD): 143</div></div>
-          <div class="kpi"><div class="label">2024 Unique Devs</div><div class="value">32</div></div>
-          <div class="kpi"><div class="label">2025 Unique Devs</div><div class="value">27</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0 6px">
+          <div><div class="muted">2024 Total Commits</div><div style="font-size:22px">340</div><div class="muted">Avg/mo: 28.33</div></div>
+          <div><div class="muted">2025 Total Commits</div><div style="font-size:22px">1,430</div><div class="muted">Avg/mo (YTD): 143</div></div>
+          <div><div class="muted">2024 Unique Devs</div><div style="font-size:22px">79</div></div>
+          <div><div class="muted">2025 Unique Devs</div><div style="font-size:22px">67</div></div>
         </div>
 
-        <div class="row"><div class="muted">Monthly Commits (2024 vs 2025)</div></div>
+        <div class="muted">Monthly Commits (2024 vs 2025)</div>
         <canvas class="mini" id="mini-selenium"></canvas>
 
         <h4 style="margin:14px 0 6px">Top 5 Committers (non-bots, 2025 YTD)</h4>
         <table><thead><tr><th>#</th><th>Author</th><th>Commits</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>diemol</td><td>181</td></tr><tr><td>2</td><td>cgoldberg</td><td>155</td></tr><tr><td>3</td><td>nvborisenko</td><td>153</td></tr><tr><td>4</td><td>selenium-ci</td><td>151</td></tr><tr><td>5</td><td>titusfortner</td><td>144</td></tr>
+            <tr><td>1</td><td>nvborisenko</td><td>141</td></tr><tr><td>2</td><td>titusfortner</td><td>134</td></tr><tr><td>3</td><td>cgoldberg</td><td>118</td></tr><tr><td>4</td><td>selenium-ci</td><td>112</td></tr><tr><td>5</td><td>RenderMichael</td><td>83</td></tr>
           </tbody>
         </table>
         <div class="muted" style="margin-top:6px">Repo: <a href="https://github.com/SeleniumHQ/selenium">SeleniumHQ/selenium</a></div>
       </div>
       <div class="project">
-        <div class="row">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
           <h3 style="margin:0">JMeter</h3>
           <div class="muted">★ 9070 • Forks 2233</div>
         </div>
 
-        <div class="kpis" style="margin:10px 0 6px">
-          <div class="kpi"><div class="label">2024 Total Commits</div><div class="value">2</div><div class="muted">Avg/mo: 0.17</div></div>
-          <div class="kpi"><div class="label">2025 Total Commits</div><div class="value">104</div><div class="muted">Avg/mo (YTD): 10.4</div></div>
-          <div class="kpi"><div class="label">2024 Unique Devs</div><div class="value">11</div></div>
-          <div class="kpi"><div class="label">2025 Unique Devs</div><div class="value">9</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0 6px">
+          <div><div class="muted">2024 Total Commits</div><div style="font-size:22px">2</div><div class="muted">Avg/mo: 0.17</div></div>
+          <div><div class="muted">2025 Total Commits</div><div style="font-size:22px">104</div><div class="muted">Avg/mo (YTD): 10.4</div></div>
+          <div><div class="muted">2024 Unique Devs</div><div style="font-size:22px">13</div></div>
+          <div><div class="muted">2025 Unique Devs</div><div style="font-size:22px">8</div></div>
         </div>
 
-        <div class="row"><div class="muted">Monthly Commits (2024 vs 2025)</div></div>
+        <div class="muted">Monthly Commits (2024 vs 2025)</div>
         <canvas class="mini" id="mini-jmeter"></canvas>
 
         <h4 style="margin:14px 0 6px">Top 5 Committers (non-bots, 2025 YTD)</h4>
         <table><thead><tr><th>#</th><th>Author</th><th>Commits</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>vlsi</td><td>48</td></tr><tr><td>2</td><td>renovate-bot</td><td>41</td></tr><tr><td>3</td><td>clayburn</td><td>3</td></tr><tr><td>4</td><td>junyejiang</td><td>2</td></tr><tr><td>5</td><td>Alioth4J</td><td>2</td></tr>
+            <tr><td>1</td><td>vlsi</td><td>48</td></tr><tr><td>2</td><td>clayburn</td><td>3</td></tr><tr><td>3</td><td>KingRabbid</td><td>2</td></tr><tr><td>4</td><td>ratacolita</td><td>2</td></tr><tr><td>5</td><td>Alioth4J</td><td>2</td></tr>
           </tbody>
         </table>
         <div class="muted" style="margin-top:6px">Repo: <a href="https://github.com/apache/jmeter">apache/jmeter</a></div>
       </div>
       <div class="project">
-        <div class="row">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
           <h3 style="margin:0">Cypress</h3>
           <div class="muted">★ 49395 • Forks 3366</div>
         </div>
 
-        <div class="kpis" style="margin:10px 0 6px">
-          <div class="kpi"><div class="label">2024 Total Commits</div><div class="value">201</div><div class="muted">Avg/mo: 16.75</div></div>
-          <div class="kpi"><div class="label">2025 Total Commits</div><div class="value">1,591</div><div class="muted">Avg/mo (YTD): 159.1</div></div>
-          <div class="kpi"><div class="label">2024 Unique Devs</div><div class="value">18</div></div>
-          <div class="kpi"><div class="label">2025 Unique Devs</div><div class="value">23</div></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0 6px">
+          <div><div class="muted">2024 Total Commits</div><div style="font-size:22px">201</div><div class="muted">Avg/mo: 16.75</div></div>
+          <div><div class="muted">2025 Total Commits</div><div style="font-size:22px">1,591</div><div class="muted">Avg/mo (YTD): 159.1</div></div>
+          <div><div class="muted">2024 Unique Devs</div><div style="font-size:22px">52</div></div>
+          <div><div class="muted">2025 Unique Devs</div><div style="font-size:22px">32</div></div>
         </div>
 
-        <div class="row"><div class="muted">Monthly Commits (2024 vs 2025)</div></div>
+        <div class="muted">Monthly Commits (2024 vs 2025)</div>
         <canvas class="mini" id="mini-cypress"></canvas>
 
         <h4 style="margin:14px 0 6px">Top 5 Committers (non-bots, 2025 YTD)</h4>
         <table><thead><tr><th>#</th><th>Author</th><th>Commits</th></tr></thead>
           <tbody>
-            <tr><td>1</td><td>jennifer-shehane</td><td>366</td></tr><tr><td>2</td><td>AtofStryker</td><td>218</td></tr><tr><td>3</td><td>ryanthemanuel</td><td>75</td></tr><tr><td>4</td><td>mschile</td><td>74</td></tr><tr><td>5</td><td>cacieprins</td><td>64</td></tr>
+            <tr><td>1</td><td>AtofStryker</td><td>182</td></tr><tr><td>2</td><td>jennifer-shehane</td><td>160</td></tr><tr><td>3</td><td>cacieprins</td><td>57</td></tr><tr><td>4</td><td>ryanthemanuel</td><td>54</td></tr><tr><td>5</td><td>mschile</td><td>51</td></tr>
           </tbody>
         </table>
         <div class="muted" style="margin-top:6px">Repo: <a href="https://github.com/cypress-io/cypress">cypress-io/cypress</a></div>
@@ -159,50 +127,31 @@ footer{color:var(--muted);text-align:center;padding:26px 10px;border-top:1px sol
   </section>
 </main>
 
-<footer>Data from GitHub REST API /stats endpoints.</footer>
+<footer>Data: GitHub REST API (Commits per year for contributor counts; /stats for monthly totals).</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const DATA = {"labels":["Playwright","Selenium","JMeter","Cypress"],"commitsA":[325,340,2,201],"commitsB":[1839,1430,104,1591],"devsA":[32,32,11,18],"devsB":[25,27,9,23],"forks":[4748,8608,2233,3366],"perProjectMonthly":[{"label":"Playwright","m2024":[0,0,0,0,0,0,0,0,0,0,186,139],"m2025":[161,219,233,154,154,186,166,191,242,133,0,0]},{"label":"Selenium","m2024":[0,0,0,0,0,0,0,0,0,0,149,191],"m2025":[202,105,263,92,120,182,97,158,61,150,0,0]},{"label":"JMeter","m2024":[0,0,0,0,0,0,0,0,0,0,2,0],"m2025":[5,3,8,1,0,4,19,0,0,64,0,0]},{"label":"Cypress","m2024":[0,0,0,0,0,0,0,0,0,0,102,99],"m2025":[113,121,205,157,164,132,145,254,151,149,0,0]}],"YEAR_A":2024,"YEAR_B":2025};
-
-const ctx1 = document.getElementById('commitsBar').getContext('2d');
-new Chart(ctx1, { type:'bar',
-  data:{ labels: DATA.labels, datasets:[
-    { label: String(DATA.YEAR_A), data: DATA.commitsA },
-    { label: String(DATA.YEAR_B)+' (YTD)', data: DATA.commitsB }
-  ]},
-  options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#e7e8ea' } } }, scales:{ x:{ ticks:{ color:'#e7e8ea' } }, y:{ ticks:{ color:'#e7e8ea' } } } }
-});
-
-const ctx2 = document.getElementById('devsBar').getContext('2d');
-new Chart(ctx2, { type:'bar',
-  data:{ labels: DATA.labels, datasets:[
-    { label: String(DATA.YEAR_A), data: DATA.devsA },
-    { label: String(DATA.YEAR_B)+' (YTD)', data: DATA.devsB }
-  ]},
-  options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#e7e8ea' } } }, scales:{ x:{ ticks:{ color:'#e7e8ea' } }, y:{ ticks:{ color:'#e7e8ea' } } } }
-});
-
-const ctx3 = document.getElementById('forksBar').getContext('2d');
-new Chart(ctx3, { type:'bar',
-  data:{ labels: DATA.labels, datasets:[{ label:'Forks', data: DATA.forks }]},
-  options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#e7e8ea' } } }, scales:{ x:{ ticks:{ color:'#e7e8ea' } }, y:{ ticks:{ color:'#e7e8ea' } } } }
-});
-
-// Per-project monthly
-const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-for (const proj of DATA.perProjectMonthly) {
-  const c = document.getElementById('mini-'+proj.label.toLowerCase());
-  if (!c) continue;
-  new Chart(c.getContext('2d'), {
-    type:'line',
-    data:{ labels: months, datasets:[
-      { label:String(DATA.YEAR_A), data: proj.m2024, tension:.25 },
-      { label:String(DATA.YEAR_B)+' (YTD)', data: proj.m2025, tension:.25 }
-    ]},
-    options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#e7e8ea' } } }, scales:{ x:{ ticks:{ color:'#e7e8ea' } }, y:{ ticks:{ color:'#e7e8ea' } } } }
-  });
+const DATA = {"labels":["Playwright","Selenium","JMeter","Cypress"],"commitsA":[325,340,2,201],"commitsB":[1839,1430,104,1591],"devsA":[139,79,13,52],"devsB":[81,67,8,32],"forks":[4748,8608,2233,3366],"perProjectMonthly":[{"label":"Playwright","m2024":[0,0,0,0,0,0,0,0,0,0,186,139],"m2025":[161,219,233,154,154,186,166,191,242,133,0,0]},{"label":"Selenium","m2024":[0,0,0,0,0,0,0,0,0,0,149,191],"m2025":[202,105,263,92,120,182,97,158,61,150,0,0]},{"label":"JMeter","m2024":[0,0,0,0,0,0,0,0,0,0,2,0],"m2025":[5,3,8,1,0,4,19,0,0,64,0,0]},{"label":"Cypress","m2024":[0,0,0,0,0,0,0,0,0,0,102,99],"m2025":[113,121,205,157,164,132,145,254,151,149,0,0]}],"YEAR_A":2024,"YEAR_B":2025};
+function buildBar(id, labelA, dataA, labelB, dataB){
+  const ctx=document.getElementById(id).getContext('2d');
+  return new Chart(ctx,{type:'bar',data:{labels:DATA.labels,datasets:[
+    {label:labelA,data:dataA},{label:labelB,data:dataB}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}});
 }
-function escapeHtml(s){ return String(s).replace(/[&<>"]/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+buildBar('commitsBar', String(DATA.YEAR_A), DATA.commitsA, String(DATA.YEAR_B)+' (YTD)', DATA.commitsB);
+buildBar('devsBar',    String(DATA.YEAR_A), DATA.devsA,    String(DATA.YEAR_B)+' (YTD)', DATA.devsB);
+
+new Chart(document.getElementById('forksBar').getContext('2d'),{
+  type:'bar',data:{labels:DATA.labels,datasets:[{label:'Forks',data:DATA.forks}]},
+  options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}
+});
+
+const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+for (const proj of DATA.perProjectMonthly){
+  const el=document.getElementById('mini-'+proj.label.toLowerCase()); if(!el) continue;
+  new Chart(el.getContext('2d'),{type:'line',data:{labels:months,datasets:[
+    {label:String(DATA.YEAR_A),data:proj.m2024,tension:.25},
+    {label:String(DATA.YEAR_B)+' (YTD)',data:proj.m2025,tension:.25}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}})}
 </script>
 </body></html>
