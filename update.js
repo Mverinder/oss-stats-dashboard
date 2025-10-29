@@ -1,8 +1,8 @@
-// update.js — GitHub Pages dashboard
-// - Exact contributor counts & Top 5 via per-year Commits API (date-bounded)
-// - Commits totals & monthly charts via /stats/commit_activity
-// - Stricter bot filtering
-// Node 20+, no npm deps required.
+// update.js — Dashboard with exact date-bounded counts that match Mike's sheet
+// - Commits, monthly buckets, contributors, top 5 => GitHub Commits API (not /stats)
+// - 2024 = full year; 2025 YTD is capped at Oct 31, 23:59:59Z (10 months)
+// - Excludes merges (parents.length > 1) and filters bots/service accounts
+// Node 20+, no npm deps.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -17,9 +17,11 @@ const PROJECTS = [
 ];
 
 const YEAR_A = 2024;
+// IMPORTANT: we freeze 2025 YTD at end of October to match the spreadsheet (10 months)
 const YEAR_B = 2025;
-
-const NOW = new Date();
+const YTD_CUTOFF = new Date(Date.UTC(2025, 9, 31, 23, 59, 59)); // 2025-10-31T23:59:59Z
+const MONTHS_A = 12;
+const MONTHS_B = 10; // YTD through October
 
 /* =========================== HELPERS ============================ */
 
@@ -35,9 +37,7 @@ function headers() {
   return h;
 }
 
-async function ghRaw(url) {
-  return fetch(url, { headers: headers() });
-}
+async function ghRaw(url) { return fetch(url, { headers: headers() }); }
 
 async function gh(endpoint) {
   const res = await ghRaw(`https://api.github.com${endpoint}`);
@@ -51,17 +51,15 @@ async function gh(endpoint) {
 function parseLinkHeader(h) {
   if (!h) return {};
   return Object.fromEntries(
-    h.split(",")
-     .map(p => {
-       const m = p.match(/<([^>]+)>;\s*rel="([^"]+)"/);
-       return m ? [m[2], m[1]] : null;
-     })
-     .filter(Boolean)
+    h.split(",").map(p => {
+      const m = p.match(/<([^>]+)>;\s*rel="([^"]+)"/);
+      return m ? [m[2], m[1]] : null;
+    }).filter(Boolean)
   );
 }
 
 async function ghPaginated(endpoint) {
-  const items = [];
+  const out = [];
   let url = `https://api.github.com${endpoint}`;
   while (url) {
     const res = await ghRaw(url);
@@ -69,28 +67,20 @@ async function ghPaginated(endpoint) {
       const body = await res.text();
       throw new Error(`GitHub API ${res.status} for ${url}: ${body}`);
     }
-    items.push(...await res.json());
+    out.push(...await res.json());
     const links = parseLinkHeader(res.headers.get("link"));
     url = links.next || null;
   }
-  return items;
+  return out;
 }
 
 /* ========================= BOT FILTERING ======================== */
-// Conservative but broad patterns commonly seen in OSS
+
 const BOT_PATTERNS = [
-  /\[bot\]$/i,           // foo[bot]
-  /-bot$/i, /^bot-/i,    // renovate-bot, bot-foo
-  /\bdependabot\b/i,
-  /\bgithub-actions\b/i,
-  /\brenovate\b/i,
-  /\bpre-commit-ci\b/i,
-  /\bsemantic-release\b/i,
-  /\bpercy\b/i,
-  /\bsnyk\b/i,
-  /\bauto[-_ ]?merge\b/i,
-  /\bautomation\b/i,
-  /\brelease[-_ ]?bot\b/i
+  /\[bot\]$/i, /-bot$/i, /^bot-/i,
+  /\bdependabot\b/i, /\bgithub-actions\b/i, /\brenovate\b/i,
+  /\bpre-commit-ci\b/i, /\bsemantic-release\b/i, /\bpercy\b/i,
+  /\bsnyk\b/i, /\bauto[-_ ]?merge\b/i, /\bautomation\b/i, /\brelease[-_ ]?bot\b/i
 ];
 
 function isBotLogin(login) { return !!login && BOT_PATTERNS.some(rx => rx.test(login)); }
@@ -101,9 +91,9 @@ function isBotNameOrEmail(name, email) {
 function isBotAuthor(author, commit) {
   if (author?.type === "Bot") return true;
   if (isBotLogin(author?.login)) return true;
-  const cn = commit?.author?.name || "";
-  const ce = commit?.author?.email || "";
-  return isBotNameOrEmail(cn, ce);
+  const n = commit?.author?.name || "";
+  const e = commit?.author?.email || "";
+  return isBotNameOrEmail(n, e);
 }
 
 /* =========================== DATA FETCH ========================= */
@@ -112,39 +102,42 @@ async function fetchRepoMeta(owner, repo) {
   return gh(`/repos/${owner}/${repo}`);
 }
 
-// Weekly totals (last ~52 weeks). GitHub may return 202 until ready.
-async function fetchWeeklyCommitActivity(owner, repo, tries = 10) {
-  const url = `https://api.github.com/repos/${owner}/${repo}/stats/commit_activity`;
-  for (let i = 0; i < tries; i++) {
-    const res = await ghRaw(url);
-    if (res.status === 202) { await sleep(2000); continue; }
-    if (!res.ok) throw new Error(`commit_activity ${res.status}`);
-    return res.json(); // [{week,total,days:[7]}]
-  }
-  const final = await ghRaw(url);
-  if (!final.ok) throw new Error(`commit_activity ${final.status}`);
-  return final.json();
+// Date-bounded commits with pagination
+async function fetchCommits(owner, repo, since, until) {
+  const endpoint = `/repos/${owner}/${repo}/commits?per_page=100&since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`;
+  return ghPaginated(endpoint);
 }
 
-// Exact per-year contributor set and top committers from Commits API (date-bounded)
-async function fetchYearContributors(owner, repo, year) {
-  const since = new Date(Date.UTC(year, 0, 1)).toISOString();
-  const until = new Date(Date.UTC(year, 11, 31, 23, 59, 59)).toISOString();
-  const endpoint = `/repos/${owner}/${repo}/commits?per_page=100&since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`;
-
-  const commits = await ghPaginated(endpoint);
-  const byAuthor = new Map(); // key (login or email/name) -> commit count
+// Compute: totals, monthly buckets, unique contributors, top 5 (non-bots, non-merges)
+function aggregateFromCommits(commits, monthsCount, year) {
+  const monthly = Array.from({ length: 12 }, () => 0);
+  const byAuthor = new Map(); // key (login OR email/name) -> commit count
+  let total = 0;
 
   for (const c of commits) {
+    // Exclude merges
+    if (Array.isArray(c.parents) && c.parents.length > 1) continue;
+    if (isBotAuthor(c.author, c.commit)) continue;
+
+    // Month bucket
+    const dt = new Date(c.commit?.author?.date || c.commit?.committer?.date || 0);
+    const y = dt.getUTCFullYear();
+    if (y !== year) continue; // safety
+
+    const m = dt.getUTCMonth(); // 0..11
+    monthly[m] += 1;
+    total += 1;
+
+    // Contributor tally
     const login = c.author?.login || null;
     const name  = c.commit?.author?.name || "";
     const email = c.commit?.author?.email || "";
-
-    if (isBotAuthor(c.author, c.commit)) continue;
-
     const key = login || (email || name || "unknown");
     byAuthor.set(key, (byAuthor.get(key) || 0) + 1);
   }
+
+  // Average per month (divide by declared monthsCount)
+  const avg = Math.round((total / monthsCount) * 100) / 100;
 
   const unique = byAuthor.size;
   const top = [...byAuthor.entries()]
@@ -152,35 +145,10 @@ async function fetchYearContributors(owner, repo, year) {
     .slice(0,5)
     .map(([author, commits]) => ({ author, commits }));
 
-  return { unique, top, byAuthor };
+  return { total, monthly, avg, unique, top };
 }
 
-/* ====================== AGGREGATION & RENDER ===================== */
-
-function monthsElapsedInYear(y, refDate) {
-  if (y < refDate.getUTCFullYear()) return 12;
-  if (y > refDate.getUTCFullYear()) return 0;
-  return refDate.getUTCMonth() + 1; // 1..12
-}
-
-function ymdUTC(ts) { const d=new Date(ts*1000); return {y:d.getUTCFullYear(), m:d.getUTCMonth()+1}; }
-
-function toYearlyMonthlyFromWeekly(weeks, yearA, yearB) {
-  const monthsA = Array.from({ length: 12 }, () => 0);
-  const monthsB = Array.from({ length: 12 }, () => 0);
-  let totalA = 0, totalB = 0;
-
-  for (const w of weeks) {
-    const wk = ymdUTC(w.week); // week start (UTC)
-    if (wk.y === yearA) { monthsA[wk.m - 1] += w.total; totalA += w.total; }
-    else if (wk.y === yearB) { monthsB[wk.m - 1] += w.total; totalB += w.total; }
-  }
-
-  const avgA = Math.round((totalA / (monthsElapsedInYear(yearA, NOW) || 12)) * 100) / 100;
-  const avgB = Math.round((totalB / (monthsElapsedInYear(yearB, NOW) || 12)) * 100) / 100;
-
-  return { monthsA, monthsB, totalA, totalB, avgA, avgB };
-}
+/* =========================== RENDER HTML ========================= */
 
 function escapeHtml(s){ return String(s).replace(/[&<>"]/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 
@@ -188,24 +156,26 @@ function renderHTML(snapshot) {
   const generatedAt = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
 
   const labels   = snapshot.map(p => p.label);
-  const commitsA = snapshot.map(p => p.commits.totalA);
-  const commitsB = snapshot.map(p => p.commits.totalB);
-  const devsA    = snapshot.map(p => p.contribA.unique);
-  const devsB    = snapshot.map(p => p.contribB.unique);
+  const commitsA = snapshot.map(p => p.y2024.total);
+  const commitsB = snapshot.map(p => p.y2025.total);
+  const devsA    = snapshot.map(p => p.y2024.unique);
+  const devsB    = snapshot.map(p => p.y2025.unique);
   const forks    = snapshot.map(p => p.meta.forks_count);
 
   const perProjectMonthly = snapshot.map(p => ({
     label: p.label,
-    m2024: p.commits.monthsA,
-    m2025: p.commits.monthsB
+    m2024: p.y2024.monthly,
+    m2025: p.y2025.monthly
   }));
 
-  const dataJSON = JSON.stringify({ labels, commitsA, commitsB, devsA, devsB, forks, perProjectMonthly, YEAR_A, YEAR_B });
+  const dataJSON = JSON.stringify({
+    labels, commitsA, commitsB, devsA, devsB, forks, perProjectMonthly,
+    YEAR_A, YEAR_B
+  });
 
   return `<!doctype html><html lang="en"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Open-Source Testing: ${YEAR_A} vs ${YEAR_B}</title>
-<meta name="description" content="Daily-updated dashboard comparing Playwright, Selenium, JMeter, and Cypress across commits, contributors, forks, and top committers." />
+<title>Open-Source Testing: ${YEAR_A} vs ${YEAR_B} (YTD)</title>
 <style>
 :root{--bg:#0f1116;--panel:#161a23;--text:#e7e8ea;--muted:#9aa0ac;--accent:#5aa2ff;--border:#2a2f3a}
 *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
@@ -245,19 +215,19 @@ footer{color:var(--muted);text-align:center;padding:26px 10px;border-top:1px sol
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0 6px">
-          <div><div class="muted">${YEAR_A} Total Commits</div><div style="font-size:22px">${p.commits.totalA.toLocaleString()}</div><div class="muted">Avg/mo: ${p.commits.avgA}</div></div>
-          <div><div class="muted">${YEAR_B} Total Commits</div><div style="font-size:22px">${p.commits.totalB.toLocaleString()}</div><div class="muted">Avg/mo (YTD): ${p.commits.avgB}</div></div>
-          <div><div class="muted">${YEAR_A} Unique Devs</div><div style="font-size:22px">${p.contribA.unique.toLocaleString()}</div></div>
-          <div><div class="muted">${YEAR_B} Unique Devs</div><div style="font-size:22px">${p.contribB.unique.toLocaleString()}</div></div>
+          <div><div class="muted">${YEAR_A} Total Commits</div><div style="font-size:22px">${p.y2024.total.toLocaleString()}</div><div class="muted">Avg/mo: ${p.y2024.avg}</div></div>
+          <div><div class="muted">${YEAR_B} Total Commits (YTD)</div><div style="font-size:22px">${p.y2025.total.toLocaleString()}</div><div class="muted">Avg/mo (10 mo): ${p.y2025.avg}</div></div>
+          <div><div class="muted">${YEAR_A} Unique Devs</div><div style="font-size:22px">${p.y2024.unique.toLocaleString()}</div></div>
+          <div><div class="muted">${YEAR_B} Unique Devs (YTD)</div><div style="font-size:22px">${p.y2025.unique.toLocaleString()}</div></div>
         </div>
 
-        <div class="muted">Monthly Commits (${YEAR_A} vs ${YEAR_B})</div>
+        <div class="muted">Monthly Commits (${YEAR_A} vs ${YEAR_B} YTD)</div>
         <canvas class="mini" id="mini-${p.id}"></canvas>
 
         <h4 style="margin:14px 0 6px">Top 5 Committers (non-bots, ${YEAR_B} YTD)</h4>
         <table><thead><tr><th>#</th><th>Author</th><th>Commits</th></tr></thead>
           <tbody>
-            ${p.contribB.top.map((t,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(t.author)}</td><td>${t.commits}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">No data</td></tr>`}
+            ${p.y2025.top.map((t,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(t.author)}</td><td>${t.commits}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">No data</td></tr>`}
           </tbody>
         </table>
         <div class="muted" style="margin-top:6px">Repo: <a href="${p.meta.html_url}">${p.meta.full_name}</a></div>
@@ -266,83 +236,51 @@ footer{color:var(--muted);text-align:center;padding:26px 10px;border-top:1px sol
   </section>
 </main>
 
-<footer>Data: GitHub REST API (Commits per year for contributor counts; /stats for monthly totals).</footer>
+<footer>Date bounds: 2024 full year; 2025 through Oct 31 (10 months). Bots and merges excluded.</footer>
 
-<!-- Use UMD build and defer so Chart is available after DOM load -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
-
 <script>
 (function () {
   const DATA = ${dataJSON};
 
-  function ctxOf(id) {
-    const el = document.getElementById(id);
-    return el ? el.getContext('2d') : null;
-  }
+  function g(id){ const el=document.getElementById(id); return el?el.getContext('2d'):null; }
 
-  function buildBar(id, labelA, dataA, labelB, dataB) {
-    const ctx = ctxOf(id);
+  function bar(ctx, label, data, label2, data2){
     if (!ctx || !window.Chart) return;
-    new Chart(ctx, {
-      type: 'bar',
-      data: { labels: DATA.labels, datasets: [
-        { label: String(DATA.YEAR_A), data: dataA },
-        { label: String(DATA.YEAR_B) + ' (YTD)', data: dataB }
-      ]},
-      options: {
-        responsive:true,
-        plugins:{ legend:{ labels:{ color:'#e7e8ea' } } },
-        scales:{ x:{ ticks:{ color:'#e7e8ea' } }, y:{ ticks:{ color:'#e7e8ea' } } }
-      }
-    });
+    new Chart(ctx,{type:'bar',data:{labels:DATA.labels,datasets:[
+      {label:String(DATA.YEAR_A),data:data},
+      {label:String(DATA.YEAR_B)+' (YTD)',data:data2}
+    ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}});
   }
 
-  function buildAllCharts() {
-    buildBar('commitsBar', DATA.YEAR_A, DATA.commitsA, DATA.YEAR_B, DATA.commitsB);
-    buildBar('devsBar',    DATA.YEAR_A, DATA.devsA,    DATA.YEAR_B, DATA.devsB);
+  function start(){
+    bar(g('commitsBar'), 'Commits', DATA.commitsA, 'Commits', DATA.commitsB);
+    bar(g('devsBar'), 'Contribs', DATA.devsA, 'Contribs', DATA.devsB);
 
-    const fctx = ctxOf('forksBar');
-    if (fctx && window.Chart) {
-      new Chart(fctx, {
-        type:'bar',
-        data:{ labels: DATA.labels, datasets:[{ label:'Forks', data: DATA.forks }]},
-        options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#e7e8ea' } } },
-          scales:{ x:{ ticks:{ color:'#e7e8ea' } }, y:{ ticks:{ color:'#e7e8ea' } } } }
-      });
-    }
+    const f=g('forksBar');
+    if (f) new Chart(f,{type:'bar',data:{labels:DATA.labels,datasets:[{label:'Forks',data:DATA.forks}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}});
 
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    for (const proj of DATA.perProjectMonthly) {
-      const el = document.getElementById('mini-' + proj.label.toLowerCase());
-      if (!el || !window.Chart) continue;
-      new Chart(el.getContext('2d'), {
-        type:'line',
-        data:{ labels: months, datasets:[
-          { label:String(DATA.YEAR_A), data: proj.m2024, tension:.25 },
-          { label:String(DATA.YEAR_B)+' (YTD)', data: proj.m2025, tension:.25 }
-        ]},
-        options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#e7e8ea' } } },
-          scales:{ x:{ ticks:{ color:'#e7e8ea' } }, y:{ ticks:{ color:'#e7e8ea' } } } }
-      });
+    const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    for (const proj of DATA.perProjectMonthly){
+      const el=document.getElementById('mini-'+proj.label.toLowerCase());
+      if (!el) continue;
+      new Chart(el.getContext('2d'),{type:'line',data:{labels:months,datasets:[
+        {label:String(DATA.YEAR_A),data:proj.m2024,tension:.25},
+        {label:String(DATA.YEAR_B)+' (YTD)',data:proj.m2025,tension:.25}
+      ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e7e8ea'}}},scales:{x:{ticks:{color:'#e7e8ea'}},y:{ticks:{color:'#e7e8ea'}}}}});
     }
   }
 
-  function startWhenReady(attempts=30) {
-    if (document.readyState !== 'complete' || !window.Chart) {
-      if (attempts > 0) return setTimeout(() => startWhenReady(attempts-1), 150);
-      return;
-    }
-    try { buildAllCharts(); } catch (e) { console.error(e); }
-  }
-
-  if (document.readyState === 'complete') startWhenReady();
-  else window.addEventListener('load', () => startWhenReady());
+  if (document.readyState==='complete') start();
+  else window.addEventListener('load', start);
 })();
 </script>
 </body></html>`;
 }
 
 /* ============================== MAIN ============================== */
+
+function iso(y,m,d,h=0,mi=0,s=0){ return new Date(Date.UTC(y,m-1,d,h,mi,s)).toISOString(); }
 
 (async () => {
   const outDir = path.join(process.cwd(), "docs");
@@ -352,23 +290,22 @@ footer{color:var(--muted);text-align:center;padding:26px 10px;border-top:1px sol
   for (const p of PROJECTS) {
     const [owner, repo] = p.slug.split("/");
 
-    const meta    = await fetchRepoMeta(owner, repo);
+    const meta = await fetchRepoMeta(owner, repo);
 
-    // Monthly & total commits (OK for charts)
-    const weekly  = await fetchWeeklyCommitActivity(owner, repo);
-    const commits = toYearlyMonthlyFromWeekly(weekly, YEAR_A, YEAR_B);
+    // 2024 full-year window
+    const commits2024 = await fetchCommits(owner, repo, iso(2024,1,1), iso(2024,12,31,23,59,59));
+    const y2024 = aggregateFromCommits(commits2024, MONTHS_A, 2024);
 
-    // Exact contributor counts & top committers per year
-    const contribA = await fetchYearContributors(owner, repo, YEAR_A);
-    const contribB = await fetchYearContributors(owner, repo, YEAR_B);
+    // 2025 YTD: Jan 1 through Oct 31 (fixed to 10 months to match sheet)
+    const commits2025 = await fetchCommits(owner, repo, iso(2025,1,1), YTD_CUTOFF.toISOString());
+    const y2025 = aggregateFromCommits(commits2025, MONTHS_B, 2025);
 
     results.push({
       id: p.label.toLowerCase(),
       label: p.label,
       meta,
-      commits,
-      contribA,
-      contribB
+      y2024,
+      y2025
     });
   }
 
