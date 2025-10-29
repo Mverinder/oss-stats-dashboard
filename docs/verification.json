@@ -1,0 +1,153 @@
+{
+  "generatedAt": "2025-10-29T22:59:01.260Z",
+  "results": [
+    {
+      "repo": "microsoft/playwright",
+      "totals": {
+        "2024": 1975,
+        "2025_YTD": 1741
+      },
+      "unique_contributors": {
+        "2024": 139,
+        "2025_YTD": 82
+      },
+      "averages": {
+        "2024": 164.58,
+        "2025_YTD": 174.1
+      },
+      "top5_2025_YTD": [
+        {
+          "author": "dgozman",
+          "commits": 270
+        },
+        {
+          "author": "pavelfeldman",
+          "commits": 268
+        },
+        {
+          "author": "mxschmitt",
+          "commits": 236
+        },
+        {
+          "author": "yury-s",
+          "commits": 229
+        },
+        {
+          "author": "Skn0tt",
+          "commits": 163
+        }
+      ]
+    },
+    {
+      "repo": "SeleniumHQ/selenium",
+      "totals": {
+        "2024": 1408,
+        "2025_YTD": 1131
+      },
+      "unique_contributors": {
+        "2024": 79,
+        "2025_YTD": 67
+      },
+      "averages": {
+        "2024": 117.33,
+        "2025_YTD": 113.1
+      },
+      "top5_2025_YTD": [
+        {
+          "author": "nvborisenko",
+          "commits": 141
+        },
+        {
+          "author": "titusfortner",
+          "commits": 134
+        },
+        {
+          "author": "cgoldberg",
+          "commits": 118
+        },
+        {
+          "author": "selenium-ci",
+          "commits": 112
+        },
+        {
+          "author": "RenderMichael",
+          "commits": 83
+        }
+      ]
+    },
+    {
+      "repo": "apache/jmeter",
+      "totals": {
+        "2024": 35,
+        "2025_YTD": 104
+      },
+      "unique_contributors": {
+        "2024": 13,
+        "2025_YTD": 8
+      },
+      "averages": {
+        "2024": 2.92,
+        "2025_YTD": 10.4
+      },
+      "top5_2025_YTD": [
+        {
+          "author": "vlsi",
+          "commits": 48
+        },
+        {
+          "author": "clayburn",
+          "commits": 3
+        },
+        {
+          "author": "KingRabbid",
+          "commits": 2
+        },
+        {
+          "author": "ratacolita",
+          "commits": 2
+        },
+        {
+          "author": "Alioth4J",
+          "commits": 2
+        }
+      ]
+    },
+    {
+      "repo": "cypress-io/cypress",
+      "totals": {
+        "2024": 802,
+        "2025_YTD": 1263
+      },
+      "unique_contributors": {
+        "2024": 51,
+        "2025_YTD": 32
+      },
+      "averages": {
+        "2024": 66.83,
+        "2025_YTD": 126.3
+      },
+      "top5_2025_YTD": [
+        {
+          "author": "AtofStryker",
+          "commits": 182
+        },
+        {
+          "author": "jennifer-shehane",
+          "commits": 160
+        },
+        {
+          "author": "cacieprins",
+          "commits": 57
+        },
+        {
+          "author": "ryanthemanuel",
+          "commits": 54
+        },
+        {
+          "author": "mschile",
+          "commits": 51
+        }
+      ]
+    }
+  ]
+}
