@@ -1,0 +1,8 @@
+{
+  "name": "oss-stats-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node update.js"
+  }
+}
