@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-10-30T14:50:12.361Z",
+  "generatedAt": "2025-10-31T14:49:00.743Z",
   "results": [
     {
       "repo": "microsoft/playwright",
@@ -10,7 +10,7 @@
       },
       "human_totals": {
         "2024": 1648,
-        "2025_YTD": 1498
+        "2025_YTD": 1507
       },
       "human_unique": {
         "2024": 138,
@@ -18,7 +18,7 @@
       },
       "all_totals": {
         "2024": 1975,
-        "2025_YTD": 1750
+        "2025_YTD": 1764
       },
       "deny_applied": [
         "microsoft-playwright-automation[bot]",
@@ -37,7 +37,7 @@
       },
       "human_totals": {
         "2024": 1244,
-        "2025_YTD": 982
+        "2025_YTD": 984
       },
       "human_unique": {
         "2024": 78,
@@ -45,7 +45,7 @@
       },
       "all_totals": {
         "2024": 1408,
-        "2025_YTD": 1132
+        "2025_YTD": 1134
       },
       "deny_applied": [
         "selenium-ci",
@@ -61,7 +61,7 @@
       },
       "human_totals": {
         "2024": 35,
-        "2025_YTD": 74
+        "2025_YTD": 78
       },
       "human_unique": {
         "2024": 13,
@@ -69,7 +69,7 @@
       },
       "all_totals": {
         "2024": 35,
-        "2025_YTD": 124
+        "2025_YTD": 128
       },
       "deny_applied": []
     },
@@ -82,7 +82,7 @@
       },
       "human_totals": {
         "2024": 497,
-        "2025_YTD": 617
+        "2025_YTD": 620
       },
       "human_unique": {
         "2024": 52,
@@ -90,7 +90,7 @@
       },
       "all_totals": {
         "2024": 802,
-        "2025_YTD": 1265
+        "2025_YTD": 1271
       },
       "deny_applied": []
     }
