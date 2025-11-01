@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-10-31T14:49:00.743Z",
+  "generatedAt": "2025-11-01T14:38:45.117Z",
   "results": [
     {
       "repo": "microsoft/playwright",
@@ -10,7 +10,7 @@
       },
       "human_totals": {
         "2024": 1648,
-        "2025_YTD": 1507
+        "2025_YTD": 1515
       },
       "human_unique": {
         "2024": 138,
@@ -18,7 +18,7 @@
       },
       "all_totals": {
         "2024": 1975,
-        "2025_YTD": 1764
+        "2025_YTD": 1773
       },
       "deny_applied": [
         "microsoft-playwright-automation[bot]",
@@ -61,7 +61,7 @@
       },
       "human_totals": {
         "2024": 35,
-        "2025_YTD": 78
+        "2025_YTD": 96
       },
       "human_unique": {
         "2024": 13,
@@ -69,7 +69,7 @@
       },
       "all_totals": {
         "2024": 35,
-        "2025_YTD": 128
+        "2025_YTD": 146
       },
       "deny_applied": []
     },
@@ -82,7 +82,7 @@
       },
       "human_totals": {
         "2024": 497,
-        "2025_YTD": 620
+        "2025_YTD": 625
       },
       "human_unique": {
         "2024": 52,
@@ -90,7 +90,7 @@
       },
       "all_totals": {
         "2024": 802,
-        "2025_YTD": 1271
+        "2025_YTD": 1276
       },
       "deny_applied": []
     }
