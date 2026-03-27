@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-26T15:16:12.173Z",
+  "generatedAt": "2026-03-27T14:59:52.161Z",
   "results": [
     {
       "repo": "microsoft/playwright",
@@ -40,7 +40,7 @@
         "2025_YTD": 984
       },
       "human_unique": {
-        "2024": 78,
+        "2024": 79,
         "2025_YTD": 66
       },
       "all_totals": {
